@@ -1,4 +1,5 @@
 """LLM provider adapters for OpenAI, Anthropic, and custom endpoints."""
+
 import time
 from typing import Protocol
 
@@ -18,9 +19,7 @@ logger = structlog.get_logger()
 class ProviderAdapter(Protocol):
     """Protocol that all provider adapters must implement."""
 
-    async def complete(
-        self, messages: list[Message], config: TargetConfig
-    ) -> CompletionResult: ...
+    async def complete(self, messages: list[Message], config: TargetConfig) -> CompletionResult: ...
 
     async def health_check(self, config: TargetConfig) -> bool: ...
 
@@ -41,9 +40,7 @@ class OpenAIAdapter:
             kwargs["base_url"] = config.base_url
         return openai.AsyncOpenAI(**kwargs)
 
-    async def complete(
-        self, messages: list[Message], config: TargetConfig
-    ) -> CompletionResult:
+    async def complete(self, messages: list[Message], config: TargetConfig) -> CompletionResult:
         client = self._get_client(config)
         msg_dicts = [{"role": m.role, "content": m.content} for m in messages]
 
@@ -70,9 +67,7 @@ class OpenAIAdapter:
 
     async def health_check(self, config: TargetConfig) -> bool:
         try:
-            result = await self.complete(
-                [Message(role="user", content="Say 'ok'")], config
-            )
+            result = await self.complete([Message(role="user", content="Say 'ok'")], config)
             return len(result.text) > 0
         except Exception as e:
             logger.error("health_check_failed", provider="openai", error=str(e))
@@ -90,9 +85,7 @@ class AnthropicAdapter:
             kwargs["api_key"] = config.api_key
         return anthropic.AsyncAnthropic(**kwargs)
 
-    async def complete(
-        self, messages: list[Message], config: TargetConfig
-    ) -> CompletionResult:
+    async def complete(self, messages: list[Message], config: TargetConfig) -> CompletionResult:
         client = self._get_client(config)
 
         system = None
@@ -130,9 +123,7 @@ class AnthropicAdapter:
 
     async def health_check(self, config: TargetConfig) -> bool:
         try:
-            result = await self.complete(
-                [Message(role="user", content="Say 'ok'")], config
-            )
+            result = await self.complete([Message(role="user", content="Say 'ok'")], config)
             return len(result.text) > 0
         except Exception as e:
             logger.error("health_check_failed", provider="anthropic", error=str(e))
@@ -142,9 +133,7 @@ class AnthropicAdapter:
 class LocalAdapter:
     """Adapter for local/self-hosted models via OpenAI-compatible API."""
 
-    async def complete(
-        self, messages: list[Message], config: TargetConfig
-    ) -> CompletionResult:
+    async def complete(self, messages: list[Message], config: TargetConfig) -> CompletionResult:
         import httpx
 
         msg_dicts = [{"role": m.role, "content": m.content} for m in messages]
@@ -172,9 +161,7 @@ class LocalAdapter:
 
     async def health_check(self, config: TargetConfig) -> bool:
         try:
-            result = await self.complete(
-                [Message(role="user", content="Say 'ok'")], config
-            )
+            result = await self.complete([Message(role="user", content="Say 'ok'")], config)
             return len(result.text) > 0
         except Exception:
             return False

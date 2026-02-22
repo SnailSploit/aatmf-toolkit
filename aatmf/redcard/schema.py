@@ -1,9 +1,9 @@
 """Red Card YAML schema loader and validator."""
-from pathlib import Path
-from typing import Optional
 
-import yaml
+from pathlib import Path
+
 import structlog
+import yaml
 
 from aatmf.core.models import (
     CardMetadata,
@@ -17,7 +17,7 @@ from aatmf.core.models import (
     TacticRef,
     TechniqueRef,
 )
-from aatmf.core.utils import TACTIC_PROBE_TYPE_MAP, TACTIC_TO_PLAYBOOK_LAYER, TACTIC_NAMES
+from aatmf.core.utils import TACTIC_PROBE_TYPE_MAP, TACTIC_TO_PLAYBOOK_LAYER
 
 logger = structlog.get_logger()
 
@@ -25,7 +25,7 @@ logger = structlog.get_logger()
 def load_card(path: str | Path) -> RedCard:
     """Load a single Red Card from a YAML file."""
     path = Path(path)
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     tactic = TacticRef(**data["aatmf_tactic"])

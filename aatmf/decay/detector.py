@@ -1,4 +1,5 @@
 """Decay detector — statistical regression detection for safety metrics."""
+
 import math
 from collections import defaultdict
 
@@ -29,12 +30,8 @@ def detect_regression(
         )
 
     # Calculate block rates
-    baseline_blocked = sum(
-        1 for r in baseline_results if r.get("verdict") == "blocked"
-    )
-    current_blocked = sum(
-        1 for r in current_results if r.get("verdict") == "blocked"
-    )
+    baseline_blocked = sum(1 for r in baseline_results if r.get("verdict") == "blocked")
+    current_blocked = sum(1 for r in current_results if r.get("verdict") == "blocked")
 
     baseline_rate = baseline_blocked / n_baseline
     current_rate = current_blocked / n_current
@@ -57,9 +54,7 @@ def detect_regression(
             n_current=n_current,
         )
 
-    se = math.sqrt(
-        pooled_rate * (1 - pooled_rate) * (1 / n_baseline + 1 / n_current)
-    )
+    se = math.sqrt(pooled_rate * (1 - pooled_rate) * (1 / n_baseline + 1 / n_current))
 
     if se == 0:
         z_score = 0.0

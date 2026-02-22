@@ -1,4 +1,5 @@
 """SARIF 2.1.0 output format for suite results."""
+
 import json
 
 from aatmf.core.models import ProbeVerdict, SuiteResult
@@ -11,18 +12,21 @@ def to_sarif(result: SuiteResult) -> str:
 
     for card_result in result.card_results:
         rule_id = card_result.card_id
-        rules.append({
-            "id": rule_id,
-            "shortDescription": {"text": f"Red Card: {rule_id}"},
-            "properties": {
-                "block_rate": card_result.block_rate,
-                "passed": card_result.passed,
-            },
-        })
+        rules.append(
+            {
+                "id": rule_id,
+                "shortDescription": {"text": f"Red Card: {rule_id}"},
+                "properties": {
+                    "block_rate": card_result.block_rate,
+                    "passed": card_result.passed,
+                },
+            }
+        )
 
         if not card_result.passed:
             failed_probes = [
-                pr for pr in card_result.probe_results
+                pr
+                for pr in card_result.probe_results
                 if pr.verdict in (ProbeVerdict.BYPASSED, ProbeVerdict.PARTIAL)
             ]
             message_parts = [f"Block rate: {card_result.block_rate:.1%}"]
@@ -31,25 +35,25 @@ def to_sarif(result: SuiteResult) -> str:
                     f"  - {pr.probe_id}: {pr.verdict.value} (compliance={pr.compliance_score:.2f})"
                 )
 
-            results_list.append({
-                "ruleId": rule_id,
-                "level": "error" if card_result.block_rate < 0.5 else "warning",
-                "message": {"text": "\n".join(message_parts)},
-                "locations": [
-                    {
-                        "physicalLocation": {
-                            "artifactLocation": {
-                                "uri": f"cards/{rule_id.lower()}.yaml"
+            results_list.append(
+                {
+                    "ruleId": rule_id,
+                    "level": "error" if card_result.block_rate < 0.5 else "warning",
+                    "message": {"text": "\n".join(message_parts)},
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {"uri": f"cards/{rule_id.lower()}.yaml"}
                             }
                         }
-                    }
-                ],
-                "properties": {
-                    "block_rate": card_result.block_rate,
-                    "avg_compliance": card_result.avg_compliance,
-                    "leakage_detected": card_result.leakage_detected,
-                },
-            })
+                    ],
+                    "properties": {
+                        "block_rate": card_result.block_rate,
+                        "avg_compliance": card_result.avg_compliance,
+                        "leakage_detected": card_result.leakage_detected,
+                    },
+                }
+            )
 
     sarif = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",

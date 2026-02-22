@@ -1,4 +1,5 @@
 """Probe executor — sends probes to target LLMs and collects responses."""
+
 import asyncio
 
 import structlog
@@ -15,7 +16,7 @@ from aatmf.core.models import (
 )
 from aatmf.core.providers import ProviderAdapter, get_provider
 from aatmf.core.rate_limiter import TokenBucketLimiter
-from aatmf.core.utils import EXECUTABLE_TYPES, SIMULATION_TYPES
+from aatmf.core.utils import SIMULATION_TYPES
 
 logger = structlog.get_logger()
 
@@ -31,9 +32,7 @@ class ProbeExecutor:
         self._provider = provider
         self._rate_limiter = rate_limiter or TokenBucketLimiter()
 
-    async def execute(
-        self, probe: Probe, target: TargetConfig
-    ) -> ExecutionResult:
+    async def execute(self, probe: Probe, target: TargetConfig) -> ExecutionResult:
         """Main entry point. Dispatches to the right handler based on probe type."""
         provider = self._provider or get_provider(target.provider)
         probe_type_str = probe.probe_type.value
@@ -139,9 +138,7 @@ class ProbeExecutor:
             if msg.role == "user":
                 conversation.append(msg)
 
-                result = await self._execute_with_retry(
-                    conversation, target, provider
-                )
+                result = await self._execute_with_retry(conversation, target, provider)
                 if result is None:
                     return ExecutionResult(
                         probe_id=probe.id,
@@ -156,15 +153,11 @@ class ProbeExecutor:
                 all_responses.append(result.text)
                 total_latency += result.latency_ms
                 total_tokens += result.usage.total_tokens
-                conversation.append(
-                    Message(role="assistant", content=result.text)
-                )
+                conversation.append(Message(role="assistant", content=result.text))
 
                 # Early termination check: if model hard-refuses, stop
                 response_lower = result.text.lower()[:200]
-                hard_refused = any(
-                    p in response_lower for p in HARD_REFUSAL_PHRASES
-                )
+                hard_refused = any(p in response_lower for p in HARD_REFUSAL_PHRASES)
                 if hard_refused and turn_idx < len(probe.messages) - 1:
                     early_termination = True
                     failure_turn = turn_idx + 1
@@ -207,5 +200,5 @@ class ProbeExecutor:
                     error=str(e),
                 )
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
         return None

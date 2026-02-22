@@ -1,4 +1,5 @@
 """Async token-bucket rate limiter for LLM API calls."""
+
 import asyncio
 import time
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ class TokenBucketLimiter:
         tokens_per_second: Refill rate (e.g. 80000 TPM / 60 = 1333 TPS)
         max_tokens: Maximum burst capacity
     """
+
     tokens_per_second: float = 1333.0
     max_tokens: float = 80000.0
     _tokens: float = field(init=False, default=0.0)

@@ -1,6 +1,7 @@
 """Decay monitor storage — SQLite database for probe result history."""
+
 import sqlite3
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
@@ -65,7 +66,7 @@ class DecayStorage:
                 result.verdict.value,
                 result.compliance_score,
                 result.response_hash,
-                datetime.utcnow().isoformat() + "Z",
+                datetime.now(UTC).isoformat().replace("+00:00", "Z"),
                 model,
                 provider,
             ),
@@ -80,7 +81,7 @@ class DecayStorage:
         provider: str,
     ) -> None:
         """Store multiple probe results in a single transaction."""
-        timestamp = datetime.utcnow().isoformat() + "Z"
+        timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         rows = [
             (
                 run_id,

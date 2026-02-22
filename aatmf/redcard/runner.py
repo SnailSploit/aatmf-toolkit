@@ -1,8 +1,7 @@
 """Red Card Runner — executes probe suites against target models."""
+
 import asyncio
-import hashlib
 import uuid
-from datetime import datetime
 
 import structlog
 
@@ -10,6 +9,7 @@ from aatmf.core.evaluator import evaluate
 from aatmf.core.executor import ProbeExecutor
 from aatmf.core.models import (
     BudgetTracker,
+    Confidence,
     EvalTier,
     ProbeResult,
     ProbeVerdict,
@@ -17,7 +17,6 @@ from aatmf.core.models import (
     RedCardResult,
     SuiteResult,
     TargetConfig,
-    Confidence,
 )
 from aatmf.core.providers import ProviderAdapter, get_provider
 from aatmf.core.rate_limiter import TokenBucketLimiter
@@ -42,9 +41,7 @@ class RedCardRunner:
         self._judge_config = judge_config
         self._budget_tracker = budget_tracker
 
-    async def run_card(
-        self, card: RedCard, target: TargetConfig
-    ) -> RedCardResult:
+    async def run_card(self, card: RedCard, target: TargetConfig) -> RedCardResult:
         """Run all probes in a card and aggregate results."""
         probe_results: list[ProbeResult] = []
 
@@ -53,28 +50,32 @@ class RedCardRunner:
                 exec_result = await self._executor.execute(probe, target)
 
                 if exec_result.verdict_hint == ProbeVerdict.SKIPPED:
-                    probe_results.append(ProbeResult(
-                        probe_id=probe.id,
-                        technique_id=probe.technique.id,
-                        tactic_id=probe.tactic.id,
-                        category=probe.metadata.get("category", ""),
-                        layer=probe.layer,
-                        verdict=ProbeVerdict.SKIPPED,
-                        compliance_score=0.0,
-                        confidence=Confidence.HIGH,
-                    ))
+                    probe_results.append(
+                        ProbeResult(
+                            probe_id=probe.id,
+                            technique_id=probe.technique.id,
+                            tactic_id=probe.tactic.id,
+                            category=probe.metadata.get("category", ""),
+                            layer=probe.layer,
+                            verdict=ProbeVerdict.SKIPPED,
+                            compliance_score=0.0,
+                            confidence=Confidence.HIGH,
+                        )
+                    )
                     continue
 
                 if exec_result.error:
-                    probe_results.append(ProbeResult(
-                        probe_id=probe.id,
-                        technique_id=probe.technique.id,
-                        tactic_id=probe.tactic.id,
-                        category=probe.metadata.get("category", ""),
-                        layer=probe.layer,
-                        verdict=ProbeVerdict.ERROR,
-                        response_text=exec_result.response_text,
-                    ))
+                    probe_results.append(
+                        ProbeResult(
+                            probe_id=probe.id,
+                            technique_id=probe.technique.id,
+                            tactic_id=probe.tactic.id,
+                            category=probe.metadata.get("category", ""),
+                            layer=probe.layer,
+                            verdict=ProbeVerdict.ERROR,
+                            response_text=exec_result.response_text,
+                        )
+                    )
                     continue
 
                 verdict, score, details = await evaluate(
@@ -87,32 +88,38 @@ class RedCardRunner:
                     budget_tracker=self._budget_tracker,
                 )
 
-                probe_results.append(ProbeResult(
-                    probe_id=probe.id,
-                    technique_id=probe.technique.id,
-                    tactic_id=probe.tactic.id,
-                    category=probe.metadata.get("category", ""),
-                    layer=probe.layer,
-                    verdict=verdict,
-                    compliance_score=score,
-                    confidence=Confidence.HIGH if details.layer_resolved == 1 else Confidence.MEDIUM,
-                    response_text=exec_result.response_text,
-                    response_hash=exec_result.response_hash,
-                    latency_ms=exec_result.latency_ms,
-                    eval_details=details,
-                    all_turn_responses=exec_result.all_turn_responses,
-                ))
+                probe_results.append(
+                    ProbeResult(
+                        probe_id=probe.id,
+                        technique_id=probe.technique.id,
+                        tactic_id=probe.tactic.id,
+                        category=probe.metadata.get("category", ""),
+                        layer=probe.layer,
+                        verdict=verdict,
+                        compliance_score=score,
+                        confidence=Confidence.HIGH
+                        if details.layer_resolved == 1
+                        else Confidence.MEDIUM,
+                        response_text=exec_result.response_text,
+                        response_hash=exec_result.response_hash,
+                        latency_ms=exec_result.latency_ms,
+                        eval_details=details,
+                        all_turn_responses=exec_result.all_turn_responses,
+                    )
+                )
 
             except Exception as e:
                 logger.error("probe_execution_error", probe_id=probe.id, error=str(e))
-                probe_results.append(ProbeResult(
-                    probe_id=probe.id,
-                    technique_id=probe.technique.id,
-                    tactic_id=probe.tactic.id,
-                    category=probe.metadata.get("category", ""),
-                    layer=probe.layer,
-                    verdict=ProbeVerdict.ERROR,
-                ))
+                probe_results.append(
+                    ProbeResult(
+                        probe_id=probe.id,
+                        technique_id=probe.technique.id,
+                        tactic_id=probe.tactic.id,
+                        category=probe.metadata.get("category", ""),
+                        layer=probe.layer,
+                        verdict=ProbeVerdict.ERROR,
+                    )
+                )
 
         return self._aggregate(card, target, probe_results)
 
@@ -124,20 +131,16 @@ class RedCardRunner:
     ) -> RedCardResult:
         """Aggregate individual probe results into a card result."""
         scoreable = [
-            r for r in probe_results
-            if r.verdict not in (ProbeVerdict.SKIPPED, ProbeVerdict.ERROR)
+            r for r in probe_results if r.verdict not in (ProbeVerdict.SKIPPED, ProbeVerdict.ERROR)
         ]
 
         blocked = sum(1 for r in scoreable if r.verdict == ProbeVerdict.BLOCKED)
         block_rate = blocked / len(scoreable) if scoreable else 0.0
         avg_compliance = (
-            sum(r.compliance_score for r in scoreable) / len(scoreable)
-            if scoreable else 0.0
+            sum(r.compliance_score for r in scoreable) / len(scoreable) if scoreable else 0.0
         )
         leakage = any(
-            r.eval_details.must_not_contain_leaked
-            for r in probe_results
-            if r.eval_details
+            r.eval_details.must_not_contain_leaked for r in probe_results if r.eval_details
         )
         total_cost = sum(r.cost_usd for r in probe_results)
 
@@ -177,9 +180,7 @@ class BatchRunner:
         self._judge_config = judge_config
         self._budget_tracker = budget_tracker
 
-    async def run_suite(
-        self, cards: list[RedCard], target: TargetConfig
-    ) -> SuiteResult:
+    async def run_suite(self, cards: list[RedCard], target: TargetConfig) -> SuiteResult:
         """Run all cards with concurrency control."""
         provider = get_provider(target.provider)
 
@@ -205,9 +206,7 @@ class BatchRunner:
             async with semaphore:
                 return await runner.run_card(card, target)
 
-        card_results = await asyncio.gather(
-            *(run_with_semaphore(card) for card in cards)
-        )
+        card_results = await asyncio.gather(*(run_with_semaphore(card) for card in cards))
 
         total_probes = sum(len(cr.probe_results) for cr in card_results)
         passed_cards = sum(1 for cr in card_results if cr.passed)
@@ -216,7 +215,11 @@ class BatchRunner:
             for cr in card_results
         )
         scoreable_probes = sum(
-            sum(1 for pr in cr.probe_results if pr.verdict not in (ProbeVerdict.SKIPPED, ProbeVerdict.ERROR))
+            sum(
+                1
+                for pr in cr.probe_results
+                if pr.verdict not in (ProbeVerdict.SKIPPED, ProbeVerdict.ERROR)
+            )
             for cr in card_results
         )
         overall_block_rate = total_blocked / scoreable_probes if scoreable_probes else 0.0

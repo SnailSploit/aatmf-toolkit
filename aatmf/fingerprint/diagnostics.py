@@ -1,4 +1,5 @@
 """Fingerprint diagnostics — standardized diagnostic probe set."""
+
 import json
 from pathlib import Path
 
@@ -22,8 +23,16 @@ DIAGNOSTIC_CATEGORIES: dict[str, str] = {
 }
 
 DIAGNOSTIC_ENCODINGS = [
-    "plain", "base64", "hex", "rot13", "unicode",
-    "leetspeak", "reversed", "pig_latin", "nato_alphabet", "morse_code",
+    "plain",
+    "base64",
+    "hex",
+    "rot13",
+    "unicode",
+    "leetspeak",
+    "reversed",
+    "pig_latin",
+    "nato_alphabet",
+    "morse_code",
 ]
 
 
@@ -41,9 +50,7 @@ def build_diagnostic_probes() -> list[Probe]:
             probe = Probe(
                 id=probe_id,
                 description=f"Diagnostic: {cat_name}/{enc_name}",
-                technique=TechniqueRef(
-                    id="T2-AT-001", name="Encoding Bypass"
-                ),
+                technique=TechniqueRef(id="T2-AT-001", name="Encoding Bypass"),
                 tactic=TacticRef(id="T2", name="Semantic Evasion"),
                 layer=1,
                 probe_type=ProbeType.ENCODING if enc_name != "plain" else ProbeType.SINGLE_TURN,
@@ -62,7 +69,9 @@ def build_diagnostic_probes() -> list[Probe]:
 def build_language_probes(translations_path: str | Path | None = None) -> list[Probe]:
     """Build 10 language variant probes from translations file."""
     if translations_path is None:
-        translations_path = Path(__file__).parent.parent.parent / "data" / "language_translations.json"
+        translations_path = (
+            Path(__file__).parent.parent.parent / "data" / "language_translations.json"
+        )
 
     translations_path = Path(translations_path)
     if not translations_path.exists():
@@ -76,9 +85,7 @@ def build_language_probes(translations_path: str | Path | None = None) -> list[P
         probe = Probe(
             id=f"DIAG-LANG-{lang_code.upper()}",
             description=f"Language variant: {lang_code}",
-            technique=TechniqueRef(
-                id="T2-AT-002", name="Language Bypass"
-            ),
+            technique=TechniqueRef(id="T2-AT-002", name="Language Bypass"),
             tactic=TacticRef(id="T2", name="Semantic Evasion"),
             layer=1,
             probe_type=ProbeType.SINGLE_TURN,

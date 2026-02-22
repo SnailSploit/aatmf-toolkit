@@ -1,4 +1,5 @@
 """Attack chain simulator — executes multi-step attack sequences."""
+
 import structlog
 
 from aatmf.core.evaluator import evaluate
@@ -50,7 +51,9 @@ class ChainSimulator:
                 probe = probe_map.get(technique_id)
 
             if probe is None:
-                tactic_id = technique_id.split("-AT-")[0] if "-AT-" in technique_id else technique_id
+                tactic_id = (
+                    technique_id.split("-AT-")[0] if "-AT-" in technique_id else technique_id
+                )
                 probe = Probe(
                     id=f"CHAIN-{step_idx:02d}-{technique_id}",
                     description=f"Chain step {step_idx + 1}: {technique_id}",

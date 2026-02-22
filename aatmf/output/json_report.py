@@ -1,4 +1,5 @@
 """JSON output format for suite results."""
+
 import json
 
 from aatmf.core.models import SuiteResult

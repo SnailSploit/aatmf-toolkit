@@ -1,8 +1,9 @@
 """Attack chain planner — BFS over compatibility graph."""
+
 from collections import deque
 
-from aatmf.core.models import AttackChain, BehavioralProfile
 from aatmf.chains.graph import TechniqueRegistry
+from aatmf.core.models import AttackChain, BehavioralProfile
 
 
 def find_best_chains(

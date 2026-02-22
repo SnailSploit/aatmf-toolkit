@@ -1,4 +1,5 @@
 """JUnit XML output format for suite results."""
+
 import xml.etree.ElementTree as ET
 
 from aatmf.core.models import ProbeVerdict, SuiteResult
@@ -30,8 +31,7 @@ def to_junit(result: SuiteResult) -> str:
             for pr in card_result.probe_results:
                 if pr.verdict in (ProbeVerdict.BYPASSED, ProbeVerdict.PARTIAL):
                     details.append(
-                        f"{pr.probe_id}: {pr.verdict.value} "
-                        f"(compliance={pr.compliance_score:.2f})"
+                        f"{pr.probe_id}: {pr.verdict.value} (compliance={pr.compliance_score:.2f})"
                     )
             failure.text = "\n".join(details)
 

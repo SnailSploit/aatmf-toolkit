@@ -1,9 +1,9 @@
 """AATMF CLI — Typer-based command-line interface."""
+
 import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -16,6 +16,7 @@ app = typer.Typer(
     name="aatmf",
     help="AATMF Red Teaming Toolkit — Adversarial AI safety testing framework",
     no_args_is_help=True,
+    invoke_without_command=True,
 )
 console = Console()
 
@@ -33,10 +34,10 @@ def _parse_target(target: str):
 
     try:
         provider = ProviderName(provider_str.lower())
-    except ValueError:
+    except ValueError as err:
         raise typer.BadParameter(
             f"Unknown provider: {provider_str}. Use: openai, anthropic, local, custom"
-        )
+        ) from err
 
     api_key = None
     base_url = None
@@ -86,7 +87,7 @@ def run(
         help="Max USD budget for LLM judge calls",
     ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show execution plan without API calls"),
-    output_path: Optional[str] = typer.Option(None, "--output-path", help="Write report to file"),
+    output_path: str | None = typer.Option(None, "--output-path", help="Write report to file"),
 ):
     """Execute Red Card probe suites against a target model."""
     from aatmf.core.models import BudgetTracker
@@ -152,8 +153,10 @@ def run(
         progress.update(task, completed=True)
 
     # Display summary
-    console.print(f"\n[bold]Results:[/bold]")
-    console.print(f"  Cards passed: [green]{suite_result.passed_cards}[/green]/{suite_result.total_cards}")
+    console.print("\n[bold]Results:[/bold]")
+    console.print(
+        f"  Cards passed: [green]{suite_result.passed_cards}[/green]/{suite_result.total_cards}"
+    )
     console.print(f"  Overall block rate: [cyan]{suite_result.overall_block_rate:.1%}[/cyan]")
     console.print(f"  Total probes: {suite_result.total_probes}")
     console.print(f"  Total cost: ${suite_result.total_cost_usd:.4f}")
@@ -169,7 +172,7 @@ def run(
 def fingerprint(
     target: str = typer.Option(..., "--target", "-t", help="Target as provider:model"),
     output: str = typer.Option("json", "--output", "-o", help="Output format"),
-    output_path: Optional[str] = typer.Option(None, "--output-path", help="Write result to file"),
+    output_path: str | None = typer.Option(None, "--output-path", help="Write result to file"),
     concurrency: int = typer.Option(3, "--concurrency", "-c", help="Concurrent probes"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show diagnostic set without executing"),
 ):
@@ -203,8 +206,8 @@ def fingerprint(
         console.print(table)
         raise typer.Exit(0)
 
-    from aatmf.fingerprint.profiler import Profiler
     from aatmf.fingerprint.matcher import match_profile
+    from aatmf.fingerprint.profiler import Profiler
 
     profiler = Profiler()
 
@@ -219,7 +222,7 @@ def fingerprint(
 
     match = match_profile(profile)
 
-    console.print(f"\n[bold]Fingerprint Results:[/bold]")
+    console.print("\n[bold]Fingerprint Results:[/bold]")
     console.print(f"  Identified defense: [cyan]{match.identified_defense}[/cyan]")
     console.print(f"  Match confidence: [cyan]{match.match_confidence:.1%}[/cyan]")
     console.print(f"  Confidence level: [cyan]{match.confidence_level}[/cyan]")
@@ -272,7 +275,7 @@ def decay_check(
     hardenings = [r for r in results if r.status == "HARDENING"]
     insufficient = [r for r in results if r.status == "INSUFFICIENT_DATA"]
 
-    console.print(f"\n[bold]Decay Check Results:[/bold]")
+    console.print("\n[bold]Decay Check Results:[/bold]")
     console.print(f"  Total probes checked: {len(results)}")
     console.print(f"  Regressions: [red]{len(regressions)}[/red]")
     console.print(f"  Hardenings: [green]{len(hardenings)}[/green]")
@@ -316,9 +319,9 @@ def chain_plan(
     top_k: int = typer.Option(5, "--top-k", help="Number of top chains to return"),
 ):
     """Plan multi-step attack chains based on a behavioral profile."""
-    from aatmf.core.models import BehavioralProfile
     from aatmf.chains.graph import TechniqueRegistry
     from aatmf.chains.planner import find_best_chains
+    from aatmf.core.models import BehavioralProfile
 
     profile_data = json.loads(Path(profile_path).read_text())
     profile = BehavioralProfile(**profile_data)
@@ -357,7 +360,9 @@ def chain_plan(
 @app.command()
 def load(
     source_dir: str = typer.Argument(..., help="Directory with FIXED.md source files"),
-    output_dir: str = typer.Option("./cards", "--output", "-o", help="Output directory for YAML cards"),
+    output_dir: str = typer.Option(
+        "./cards", "--output", "-o", help="Output directory for YAML cards"
+    ),
 ):
     """Parse AATMF FIXED.md files into Red Card YAML files."""
     import yaml
@@ -416,14 +421,16 @@ def load(
         }
 
         for p in tech_probes:
-            card_data["probes"].append({
-                "id": p.id,
-                "messages": [{"role": m.role, "content": m.content} for m in p.messages],
-                "expect": {
-                    "should_block": p.expect.should_block,
-                    "must_not_contain": p.expect.must_not_contain,
-                },
-            })
+            card_data["probes"].append(
+                {
+                    "id": p.id,
+                    "messages": [{"role": m.role, "content": m.content} for m in p.messages],
+                    "expect": {
+                        "should_block": p.expect.should_block,
+                        "must_not_contain": p.expect.must_not_contain,
+                    },
+                }
+            )
 
         card_file = card_dir / f"{technique_id.lower()}.yaml"
         card_file.write_text(yaml.dump(card_data, default_flow_style=False, allow_unicode=True))
@@ -432,13 +439,17 @@ def load(
     console.print(f"Generated [green]{card_count}[/green] Red Card YAML files in {output_dir}")
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     version: bool = typer.Option(False, "--version", "-v", help="Show version"),
 ):
     """AATMF Red Teaming Toolkit."""
     if version:
         console.print(f"aatmf v{__version__}")
+        raise typer.Exit(0)
+    if ctx.invoked_subcommand is None and not version:
+        console.print(ctx.get_help())
         raise typer.Exit(0)
 
 

@@ -1,4 +1,5 @@
 """Decay monitor — tracks safety performance over time."""
+
 import uuid
 from datetime import datetime, timedelta
 
@@ -39,9 +40,7 @@ class DecayMonitor:
     ) -> list[RegressionResult]:
         """Run current probes, compare against baseline, detect regressions."""
         # Check for stale baseline
-        latest = self._storage.get_latest_timestamp(
-            target.model, target.provider.value
-        )
+        latest = self._storage.get_latest_timestamp(target.model, target.provider.value)
         if latest:
             try:
                 latest_dt = datetime.fromisoformat(latest.replace("Z", "+00:00"))
@@ -85,9 +84,7 @@ class DecayMonitor:
                 # Exclude current run from baseline
                 baseline = [b for b in baseline if b["run_id"] != run_id]
 
-                current = [
-                    {"verdict": pr.verdict.value, "compliance_score": pr.compliance_score}
-                ]
+                current = [{"verdict": pr.verdict.value, "compliance_score": pr.compliance_score}]
 
                 result = detect_regression(
                     probe_id=pr.probe_id,
@@ -109,9 +106,7 @@ class DecayMonitor:
 
         return regression_results
 
-    def get_category_summary(
-        self, results: list[RegressionResult]
-    ) -> list:
+    def get_category_summary(self, results: list[RegressionResult]) -> list:
         """Get category-level regression summary."""
         return aggregate_regressions(results)
 

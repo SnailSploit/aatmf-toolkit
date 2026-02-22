@@ -1,4 +1,5 @@
 """Fingerprint profiler — runs diagnostic probes and builds a behavioral profile."""
+
 import asyncio
 from collections import defaultdict
 
@@ -36,9 +37,7 @@ class Profiler:
         # Health check
         healthy = await provider.health_check(target)
         if not healthy:
-            raise RuntimeError(
-                f"Health check failed for {target.provider.value}:{target.model}"
-            )
+            raise RuntimeError(f"Health check failed for {target.provider.value}:{target.model}")
 
         rate_limiter = TokenBucketLimiter()
         executor = ProbeExecutor(provider=provider, rate_limiter=rate_limiter)
@@ -125,15 +124,9 @@ class Profiler:
         }
 
         # Latency overhead
-        avg_refusal = (
-            sum(refusal_latencies) / len(refusal_latencies)
-            if refusal_latencies
-            else 0
-        )
+        avg_refusal = sum(refusal_latencies) / len(refusal_latencies) if refusal_latencies else 0
         avg_non_refusal = (
-            sum(non_refusal_latencies) / len(non_refusal_latencies)
-            if non_refusal_latencies
-            else 0
+            sum(non_refusal_latencies) / len(non_refusal_latencies) if non_refusal_latencies else 0
         )
         latency_overhead = max(0, avg_refusal - avg_non_refusal)
 

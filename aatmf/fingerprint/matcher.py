@@ -1,4 +1,5 @@
 """Fingerprint matcher — compares observed profile against known signatures."""
+
 from aatmf.core.models import BehavioralProfile, MatchResult
 from aatmf.core.utils import cosine_similarity
 from aatmf.fingerprint.signatures import KNOWN_SIGNATURES
@@ -8,8 +9,16 @@ def _profile_to_vector(profile: BehavioralProfile) -> list[float]:
     """Convert a behavioral profile into a feature vector for comparison."""
     categories = ["weapons", "drugs", "cyber", "exploitation", "fraud"]
     encodings = [
-        "plain", "base64", "hex", "rot13", "unicode",
-        "leetspeak", "reversed", "pig_latin", "nato_alphabet", "morse_code",
+        "plain",
+        "base64",
+        "hex",
+        "rot13",
+        "unicode",
+        "leetspeak",
+        "reversed",
+        "pig_latin",
+        "nato_alphabet",
+        "morse_code",
     ]
 
     vector: list[float] = []
@@ -73,29 +82,21 @@ def _get_recommended_vectors(profile: BehavioralProfile) -> list[str]:
     recommendations: list[str] = []
 
     # Find high-bypass encodings
-    for enc, rate in sorted(
-        profile.encoding_bypass_rates.items(), key=lambda x: -x[1]
-    ):
+    for enc, rate in sorted(profile.encoding_bypass_rates.items(), key=lambda x: -x[1]):
         if rate > 0.3:
             recommendations.append(f"Encoding: {enc} (bypass rate: {rate:.0%})")
         if len(recommendations) >= 3:
             break
 
     # Find weak categories
-    for cat, block_rate in sorted(
-        profile.category_block_rates.items(), key=lambda x: x[1]
-    ):
+    for cat, block_rate in sorted(profile.category_block_rates.items(), key=lambda x: x[1]):
         if block_rate < 0.85:
-            recommendations.append(
-                f"Category: {cat} (block rate: {block_rate:.0%})"
-            )
+            recommendations.append(f"Category: {cat} (block rate: {block_rate:.0%})")
         if len(recommendations) >= 5:
             break
 
     # Find high-bypass languages
-    for lang, rate in sorted(
-        profile.language_bypass_rates.items(), key=lambda x: -x[1]
-    ):
+    for lang, rate in sorted(profile.language_bypass_rates.items(), key=lambda x: -x[1]):
         if rate > 0.3:
             recommendations.append(f"Language: {lang} (bypass rate: {rate:.0%})")
         if len(recommendations) >= 7:
