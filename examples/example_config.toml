@@ -1,0 +1,15 @@
+[target]
+provider = "openai"
+model = "gpt-4o"
+temperature = 0.0
+max_tokens = 2048
+
+[evaluation]
+tier = 2
+judge_provider = "openai"
+judge_model = "gpt-4o"
+max_budget_usd = 50.0
+
+[execution]
+concurrency = 5
+log_level = "INFO"

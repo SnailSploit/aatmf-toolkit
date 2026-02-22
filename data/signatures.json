@@ -1,0 +1,22 @@
+{
+  "GPT-4 Moderation API": {
+    "description": "High category sensitivity, uniform encoding resistance, latency overhead 80-150ms",
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "Claude Constitutional AI": {
+    "description": "Refusal-heavy in weapons/cyber, moderate encoding bypass, latency overhead 20-50ms",
+    "provider": "anthropic",
+    "model": "claude-3-5-sonnet-20241022"
+  },
+  "Llama Guard": {
+    "description": "Binary block/allow, high encoding bypass rates, no latency overhead",
+    "provider": "local",
+    "model": "llama-guard-3"
+  },
+  "Custom Enterprise Filter": {
+    "description": "Keyword-based, high leetspeak/rot13 bypass, varies by deployment",
+    "provider": "custom",
+    "model": "enterprise-filtered"
+  }
+}
